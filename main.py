@@ -6,27 +6,14 @@ class whatsapp_bot:
     from selenium.webdriver.common.by import By
     from selenium.common.exceptions import TimeoutException
     from selenium.common.exceptions import WebDriverException
+    from selenium.common.exceptions import NoSuchElementException
     from PIL import Image
     import warnings, os, time
     def __init__(self):
         self.logged = False
         self.contacts = []
-        try:
-            path = input(r'[+] Please Enter Chrome Driver Path (c:\TPCT\chromedriver.exe\ Press Enter): ')
-            if self.os.path.isfile(path):
-                try:
-                    self.browser_creator(path)
-                    self.login()
-                    self.get_contacts()
-                except self.WebDriverException as e:
-                    print('[-] Invalid driver make sure you are using chrome driver . script will exit()')
-                    self.os._exit(1)
-            else:
-                print('[-] Invalid driver path. script will exit()')
-                self.os._exit(1)
-            pass
-        except KeyboardInterrupt:
-            self.os._exit(1)
+        self.service_start()
+
 
     def browser_creator(self, chrome_driver=r'c:\TPCT\chromedriver.exe'):
         try:
@@ -47,11 +34,17 @@ class whatsapp_bot:
             while True:
                 try:
                     self.WebDriverWait(self.browser, 60).until(lambda x: x.find_element_by_name('rememberMe'))
+                    self.WebDriverWait(self.browser, 60).until(lambda x: x.find_element_by_css_selector('img[alt="Scan me!"'))
                     break
-                except self.WebDriverException:
+                except self.TimeoutException:
                     pass
             self.browser.find_element_by_name('rememberMe').send_keys(self.Keys.SPACE)
             self.browser.save_screenshot('whatsapp.png')
+            while True:
+                try:
+                    self.browser.find_element_by_id('progressbar').is_displayed()
+                except:
+                    break
             element = self.browser.find_element_by_css_selector('img[alt="Scan me!"')
             x1 = element.location['x'] + element.size['width'] + 20
             y1 = element.location['y'] + element.size['height'] + 20
@@ -95,9 +88,9 @@ class whatsapp_bot:
                     self.browser.find_element_by_css_selector('div[title="New chat"]').click()
                     contacts_container = self.browser.find_element_by_css_selector('div[data-list-scroll-container="true"]')
                     self.browser.execute_script('arguments[0].scrollTop = arguments[0].scrollHeight', contacts_container)
-                    self.browser.save_screenshot('test.png')
                     self.contacts = sorted(list(set([i.find_element_by_css_selector('span[dir="auto"]').text for i in
-                                            contacts_container.find_elements_by_css_selector('div[tabindex="-1"]')])))
+                                                     self.browser.find_element_by_css_selector('div[data-tab="3"]').
+                                                     find_elements_by_css_selector('div[tabindex="-1"]')])))
                     self.browser.find_element_by_css_selector('span[data-icon="back-light"]').click()
                     break
                 except Exception as e:
@@ -111,12 +104,27 @@ class whatsapp_bot:
                 > 0:
             try:
                 self.browser.find_element_by_css_selector('div[title="New chat"]').click()
+                contacts_container = self.browser.find_element_by_css_selector('div[data-list-scroll-container="true"]')
+                self.browser.execute_script('arguments[0].scrollTop = arguments[0].scrollHeight', contacts_container)
+                try:
+                    self.WebDriverWait(self.browser, 60).until(
+                        lambda x: x.find_element_by_css_selector('span[title="%s"]' % username))
+                except self.TimeoutException:
+                    print('Message Will Not be sent')
                 self.browser.find_element_by_css_selector('span[title="%s"]' % username).click()
                 message_box = self.browser.find_element_by_css_selector('div[dir="ltr"]')
                 message_box.send_keys(message)
                 message_box.send_keys(self.Keys.ENTER)
+                try:
+                    self.browser.find_element_by_css_selector('span[data-icon="back-light"]').click()
+                except self.NoSuchElementException:
+                    pass
                 print('[+] message sent to %s' % username)
             except Exception as e:
+                try:
+                    self.browser.find_element_by_css_selector('span[data-icon="back-light"]').click()
+                except self.NoSuchElementException:
+                    pass
                 print('Message has not sent: ' + str(e))
                 self.browser.save_screenshot('test.png')
         else:
@@ -126,5 +134,78 @@ class whatsapp_bot:
     def message_to_all(self, message):
         for i in self.contacts:
             self.send_message(i, message)
+
+    def service_start(self):
+        def title():
+            import os
+            os.system(
+                'title TPCT whatsapp messaging bot Version 1' if os.name == 'nt' else
+                '\x1b]2;TPCT whatsapp messaging bot Version 1\x07')
+
+        title()
+
+        def cls():
+            import os
+            os.system('cls' if os.name == 'nt' else 'clear')
+
+        cls()
+
+        title = """
+           _             _                              ______         _   
+          | |           | |                             | ___ \       | |  
+__      __| |__    __ _ | |_  ___   __ _  _ __   _ __   | |_/ /  ___  | |_ 
+\ \ /\ / /| '_ \  / _` || __|/ __| / _` || '_ \ | '_ \  | ___ \ / _ \ | __|
+ \ V  V / | | | || (_| || |_ \__ \| (_| || |_) || |_) | | |_/ /| (_) || |_ 
+  \_/\_/  |_| |_| \__,_| \__||___/ \__,_|| .__/ | .__/  \____/  \___/  \__|
+                                         | |    | |                        
+                                         |_|    |_|                                                                  
+                                Th3 Professional Cod3r
+        Github: https://github.com/TPCT
+        Facebook: https://www.facebook.com/Taylor.Ackerley.9"""
+        print(title)
+        path = input(r'[+] Please Enter Chrome Driver Path (c:\TPCT\chromedriver.exe\ Press Enter): ')
+        if self.os.path.isfile(path):
+            try:
+                self.browser_creator(path)
+                self.login()
+                self.get_contacts()
+            except self.WebDriverException as e:
+                print('[-] Invalid driver make sure you are using chrome driver . script will exit()')
+                self.os._exit(1)
+        else:
+            print('[-] Invalid driver path. script will exit()')
+            self.os._exit(1)
+        pass
+        if self.logged:
+            try:
+                while True:
+                    choice = input("[1] for one friend message\n[2] for all friends message\n[3] Logout\n[+] Please Choose (number): ")
+                    if choice == "1":
+                        try:
+                            print('[+] You selected message for one friend service')
+                            start = 1
+                            for i in self.contacts:
+                                print('[%s] %s' % (start, i))
+                                start += 1
+                            username = self.contacts[int(input('[+] Please Choice On of The Above (No.): ')) - 1]
+                            message = input("[+] Please Enter Message To Start Service: ")
+                            self.send_message(username, message)
+                        except Exception as e:
+                            print(e)
+                            print('[-] Something went wrong. Please try again')
+                    elif choice == "2":
+                        try:
+                            message = input("[+] Please Enter Message To Start Service: ")
+                            self.message_to_all(message)
+                        except:
+                            print('[-] Something went wrong. Please try again')
+                    else:
+                        print('[-] Something went wrong. Please try again')
+            except KeyboardInterrupt:
+                self.os._exit(1)
+        else:
+            print('[+] Plese Login First')
+            self.service_start()
+
 
 whatsapp_bot()
